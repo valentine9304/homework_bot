@@ -28,7 +28,7 @@ HOMEWORK_VERDICTS = {
 
 
 def check_tokens():
-    """" Проверяет доступность переменных окружения, которые необходимы для работы программы"""
+    """Проверяет доступность переменных окружения."""
     list_tokens = [
         PRACTICUM_TOKEN,
         TELEGRAM_TOKEN,
@@ -38,7 +38,7 @@ def check_tokens():
 
 
 def send_message(bot, message):
-    """"Отправляет сообщение в Telegram чат"""
+    """Отправляет сообщение в Telegram чат."""
     try:
         logging.debug(f'Бот отправил сообщение {message}')
         bot.send_message(TELEGRAM_CHAT_ID, message)
@@ -47,7 +47,7 @@ def send_message(bot, message):
 
 
 def get_api_answer(timestamp):
-    """Делает запрос к единственному эндпоинту API-сервиса. В качестве параметра в функцию передается временная метка"""
+    """Делает запрос к единственному эндпоинту API-сервиса."""
     payload = {'from_date': timestamp}
     try:
         homework_statuses = requests.get(
@@ -63,7 +63,7 @@ def get_api_answer(timestamp):
 
 
 def check_response(response):
-    """"Проверяет ответ API на соответствие документации. В качестве параметра функция получает ответ API, приведенный к типам данных Python"""
+    """Проверяет ответ API на соответствие документации."""
     if not response:
         message = 'Пустой словарь'
         logging.error(message)
@@ -114,9 +114,8 @@ def parse_status(homework):
 
 def main():
     """Основная логика работы бота."""
-
     if not check_tokens():
-        logging.critical(f'Отсутствует токен')
+        logging.critical('Отсутствует токен')
         sys.exit("Программа  остановлена")
 
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
