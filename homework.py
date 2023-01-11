@@ -8,6 +8,9 @@ import telegram
 from dotenv import load_dotenv
 from http import HTTPStatus
 
+from exceptions import HTTPStatusError, EndpointError, TelegramIDError
+from exceptions import ReponseKeyError
+
 load_dotenv()
 
 
@@ -43,7 +46,8 @@ def send_message(bot, message):
         logging.debug(f'Бот отправил сообщение {message}')
         bot.send_message(TELEGRAM_CHAT_ID, message)
     except Exception as error:
-        logging.error(error)
+        logging.error(f'Ошибка отправки сообщения. {error}')
+        raise TelegramIDError(error)
 
 
 def get_api_answer(timestamp):
@@ -52,35 +56,32 @@ def get_api_answer(timestamp):
     try:
         homework_statuses = requests.get(
             ENDPOINT, headers=HEADERS, params=payload)
-    except requests.exceptions.RequestException as error:
-        raise Exception(f'Ошибка при запросе к API: {error}')
-    if homework_statuses.status_code != HTTPStatus.OK:
-        raise requests.exceptions.StatusCodeException(
-            'Неверный код ответа API'
-        )
-
+        if homework_statuses.status_code != HTTPStatus.OK:
+            raise HTTPStatusError(homework_statuses)
+    except Exception as error:
+        raise EndpointError(error, ENDPOINT)
     return homework_statuses.json()
 
 
 def check_response(response):
     """Проверяет ответ API на соответствие документации."""
     if not response:
-        message = 'Пустой словарь'
+        message = 'Ответ от АПИ пришёл пустым словарём'
         logging.error(message)
         raise KeyError(message)
 
     if not isinstance(response, dict):
-        message = 'Некорректный тип.'
+        message = 'Ответ от АПИ пришёл не в словаре.'
         logging.error(message)
         raise TypeError(message)
 
     if 'homeworks' not in response:
-        message = 'Нет ожидаемого ключа.'
+        message = 'В ответе от АПИ нет ожидаемого ключа.'
         logging.error(message)
-        raise KeyError(message)
+        raise ReponseKeyError(message)
 
     if not isinstance(response.get('homeworks'), list):
-        message = 'Формат ответа не соответствует.'
+        message = 'В словаре нет Списка.'
         logging.error(message)
         raise TypeError(message)
 
@@ -103,11 +104,12 @@ def parse_status(homework):
         logging.error(message)
         raise KeyError(message)
 
-    verdict = HOMEWORK_VERDICTS.get(homework_status)
     if homework_status not in HOMEWORK_VERDICTS:
         message = 'Такого статуса домашней работы нет'
         logging.error(message)
         raise KeyError(message)
+    else:
+        verdict = HOMEWORK_VERDICTS.get(homework_status)
 
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
@@ -128,17 +130,15 @@ def main():
             homeworks = check_response(response)
             if len(homeworks) == 0:
                 logging.debug('Нет проверенных домашний работ.')
-                break
             for homework in homeworks:
                 message = parse_status(homework)
                 if homework:
                     send_message(bot, message)
 
         except Exception as error:
-            message = f'Сбой в работе программы: {error}'
-            if prev_error != message:
-                send_message(bot, message)
-                prev_error = message
+            if prev_error != error:
+                send_message(bot, error)
+                prev_error = error
         else:
             prev_error = None
         finally:
