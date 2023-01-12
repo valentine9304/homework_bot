@@ -8,8 +8,9 @@ import telegram
 from dotenv import load_dotenv
 from http import HTTPStatus
 
-from exceptions import HTTPStatusError, EndpointError, TelegramIDError
-from exceptions import ReponseKeyError
+from exceptions import (HTTPStatusError, EndpointError, TelegramIDError,
+                        ReponseKeyError)
+
 
 load_dotenv()
 
@@ -95,8 +96,8 @@ def parse_status(homework):
         message = 'Отсутствует имя домашней работы.'
         logging.warning(message)
         raise KeyError(message)
-    else:
-        homework_name = homework.get('homework_name')
+
+    homework_name = homework.get('homework_name')
 
     homework_status = homework.get('status')
     if 'status' not in homework:
@@ -108,21 +109,22 @@ def parse_status(homework):
         message = 'Такого статуса домашней работы нет'
         logging.error(message)
         raise KeyError(message)
-    else:
-        verdict = HOMEWORK_VERDICTS.get(homework_status)
+
+    verdict = HOMEWORK_VERDICTS.get(homework_status)
 
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
 def main():
     """Основная логика работы бота."""
+    logging.info('Бот запущен.')
     if not check_tokens():
         logging.critical('Отсутствует токен')
         sys.exit("Программа  остановлена")
 
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())
-    prev_error = None
+    # prev_error = None
 
     while True:
         try:
@@ -136,18 +138,21 @@ def main():
                     send_message(bot, message)
 
         except Exception as error:
-            if prev_error != error:
-                send_message(bot, error)
-                prev_error = error
-        else:
-            prev_error = None
+            # if prev_error != error:
+            send_message(bot, error)
+        #         prev_error = error
+        # else:
+        #     prev_error = None
         finally:
             time.sleep(RETRY_PERIOD)
 
 
 if __name__ == '__main__':
     logging.basicConfig(
-        format='%(asctime)s [%(levelname)s] %(message)s',
-        handlers=[logging.FileHandler('log.txt')]
+        level=logging.DEBUG,
+        filename='log.log',
+        filemode='w',
+        format='%(asctime)s [%(levelname)s] Line: %(lineno)d |'
+        ' Func: %(funcName)s| %(message)s'
     )
     main()
